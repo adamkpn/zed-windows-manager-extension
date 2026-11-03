@@ -39,9 +39,9 @@ build: ## Build the extension (ray build)
 build-dist: ## Build into dist/ for Tinycast's "Add from folder"
 	npm run build:dist
 
-icon: ## Render assets/icon.png (512x512) from assets/icon.svg
+icon: ## Render assets/icon.png (512x512) from design/icon.svg
 	@command -v rsvg-convert >/dev/null || { echo "❌ Needs rsvg-convert: brew install librsvg"; exit 1; }
-	rsvg-convert -w 512 -h 512 assets/icon.svg -o assets/icon.png
+	rsvg-convert -w 512 -h 512 design/icon.svg -o assets/icon.png
 	@echo "wrote assets/icon.png"
 
 droplet: ## Build "~/Applications/Zed Open.app" (open in Zed, reusing an open window)
@@ -60,6 +60,33 @@ droplet: ## Build "~/Applications/Zed Open.app" (open in Zed, reusing an open wi
 	@echo "✅ built $(DROPLET_APP)"
 	@echo "   Tinycast → Git Repos → preferences → \"Open with\" (↵): pick $(DROPLET_NAME).app"
 
+##@ 📤 Release
+
+# Same assets the release workflow publishes, so a release can be reproduced
+# locally. macOS only (osacompile, ditto). Tag and push to publish:
+#   git tag v1.0.0 && git push origin v1.0.0
+release-assets: ## Build release/ zips + .sha256 + notes for VERSION=vX.Y.Z
+	@printf '%s' "$(VERSION)" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$$' || { \
+		echo "❌ Set VERSION=vMAJOR.MINOR.PATCH (got '$(VERSION)')"; exit 1; }
+	@[ "$$(uname)" = Darwin ] || { echo "❌ macOS only"; exit 1; }
+	rm -rf release && mkdir -p release
+	@version="$(VERSION)"; version="$${version#v}"; \
+	awk -v v="$$version" ' \
+		index($$0, "## [" v "]") == 1 { found = 1; next } \
+		found && /^## \[/ { exit } \
+		found { print } \
+	' CHANGELOG.md > release/notes.md; \
+	grep -q '[^[:space:]]' release/notes.md || { \
+		echo "❌ CHANGELOG.md has no '## [$$version]' section"; exit 1; }
+	npm run build:dist
+	@tmp=$$(mktemp -d) && trap 'rm -rf "$$tmp"' EXIT && \
+	cp -R dist "$$tmp/zed-windows" && \
+	(cd "$$tmp" && zip -qr - zed-windows -x '*.map') > "release/zed-windows-$(VERSION).zip" && \
+	$(MAKE) --no-print-directory droplet DROPLET_DIR="$$tmp/droplet" >/dev/null && \
+	ditto -c -k --keepParent --norsrc --noextattr "$$tmp/droplet/$(DROPLET_NAME).app" "release/Zed-Open-$(VERSION).zip"
+	cd release && for f in *.zip; do shasum -a 256 "$$f" > "$$f.sha256"; done
+	@ls -1 release
+
 ##@ 🧪 Test
 
 test: ## Unit tests for src/lib and droplet/zed-open.sh (node:test via tsx)
@@ -72,16 +99,27 @@ typecheck: raycast-env.d.ts ## Type-check without emitting
 raycast-env.d.ts: package.json
 	npm run build
 
-shellcheck: require-docker ## Lint droplet/zed-open.sh with ShellCheck
-	docker run --rm -v "$(PWD)":/mnt koalaman/shellcheck:stable -s sh droplet/zed-open.sh
+shellcheck: ## Lint droplet/zed-open.sh with ShellCheck (local binary, else Docker)
+	@if command -v shellcheck >/dev/null; then \
+		shellcheck -s sh droplet/zed-open.sh; \
+	else \
+		$(MAKE) --no-print-directory require-docker && \
+		docker run --rm -v "$(PWD)":/mnt koalaman/shellcheck:stable -s sh droplet/zed-open.sh; \
+	fi
 
-verify: build typecheck lint test ## Everything a PR should pass
+# Same checks as CI and the release workflow. Uses lint-src rather than
+# `ray lint`, whose Store author check fails for an unpublished author.
+verify: build typecheck lint-src test shellcheck ## Everything a PR should pass
 	@echo "✅ verify passed"
 
 ##@ 🎨 Lint & format
 
-lint: ## ray lint: package.json, icons, ESLint, Prettier
+lint: ## ray lint: package.json, icons, ESLint, Prettier (needs a Raycast Store author)
 	npm run lint
+
+lint-src: ## ESLint + Prettier on src/ (what CI runs)
+	npx eslint src
+	npx prettier --check src
 
 fix-lint: ## ray lint --fix
 	npm run fix-lint
@@ -129,10 +167,10 @@ clean-all: clean ## Also remove node_modules (asks for confirmation first)
 require-docker:
 	@docker info >/dev/null 2>&1 || { \
 		echo "❌ Docker is not running — start Docker Desktop."; \
-		echo "   Needed for: scan-fs, scan-secrets, shellcheck"; \
+		echo "   Needed for: scan-fs, scan-secrets (and shellcheck without a local binary)"; \
 		exit 1; }
 
 # Every target, no exceptions — a directory sharing a target name (dist/)
 # would otherwise make make treat that target as already up to date.
-.PHONY: help install build build-dist icon droplet test typecheck shellcheck verify lint fix-lint format-check dev \
+.PHONY: help install build build-dist icon droplet release-assets test typecheck shellcheck verify lint lint-src fix-lint format-check dev \
 	audit scan-fs scan-secrets security clean clean-all require-docker

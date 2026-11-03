@@ -52,11 +52,11 @@ Zed doesn't document this database, so a Zed update could change it. If that hap
 
 ## Install in Tinycast
 
-```bash
-make install build-dist   # npm ci + ray build into dist/
-```
+- **From GitHub:** Settings → Extensions → Install New → **Install from GitHub**, then enter `https://github.com/adamkpn/zed-windows-manager-extension`.
+- **From a release:** download `zed-windows-v*.zip` from [Releases](https://github.com/adamkpn/zed-windows-manager-extension/releases), check it with `shasum -a 256 -c zed-windows-v*.zip.sha256`, unzip it, then **Add from folder** and pick the `zed-windows` folder.
+- **From source:** `make install build-dist`, then **Add from folder** and pick `dist/`. For development in Raycast, `make dev`.
 
-Then **Tinycast Settings → Extensions → Install New → Add from folder** and pick `dist/`. For development in Raycast, `make dev`.
+The droplet is in each release as `Zed-Open-v*.zip`. It is ad-hoc signed, not notarized, so macOS quarantines the downloaded copy. After unzipping, either run `xattr -dr com.apple.quarantine "Zed Open.app"` or right-click → Open once, then move it to `~/Applications`. `make droplet` builds it locally and avoids the quarantine.
 
 ## Preferences
 
@@ -71,12 +71,25 @@ The droplet reads `ZED_CLI` and `ZED_DB` from the environment for the same overr
 
 ```bash
 make            # list targets
-make verify     # build, typecheck, lint, test
+make verify     # build, typecheck, ESLint + Prettier, tests, ShellCheck (same as CI)
 make test       # unit tests, including droplet/zed-open.sh against a fixture database
 make droplet    # rebuild the droplet after editing droplet/
+make release-assets VERSION=v1.0.0   # the release zips, locally, into release/
 ```
 
-`ray lint` reports `Invalid author "adamkpn"` because that handle isn't a Raycast Store user. That only matters for publishing to the Store.
+`make lint` (`ray lint`) reports `Invalid author "adamkpn"` because that handle isn't a Raycast Store user. That only matters for publishing to the Store, so `verify` and CI run ESLint and Prettier directly.
+
+### CI and releases
+
+- **CI** (`.github/workflows/ci.yml`) runs on every pull request and push to `main`, on `macos-latest`. It runs `npm audit`, `make verify`, and a droplet build with a signature check.
+- **Release** (`.github/workflows/release.yml`) runs when you push a `vX.Y.Z` tag. It runs the same checks, then `make release-assets`, then publishes a GitHub Release with both zips and their `.sha256` files. The release notes are the matching `## [X.Y.Z]` section of `CHANGELOG.md`, and the release fails if that section is missing.
+
+  ```bash
+  # add a "## [1.1.0] - YYYY-MM-DD" section to CHANGELOG.md, merge to main, then:
+  git tag v1.1.0 && git push origin v1.1.0
+  ```
+
+- **Dependabot** sends weekly grouped updates for npm packages and the pinned GitHub Actions.
 
 ## Privacy
 

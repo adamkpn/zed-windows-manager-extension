@@ -1,0 +1,34 @@
+# Weekly dependency PRs. Minor and patch updates are grouped into one PR per
+# ecosystem; majors (e.g. @raycast/api 2.x) arrive one by one for review.
+# The cooldown skips versions published in the last 7 days, so a hijacked
+# release is usually caught and yanked before it is proposed here.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      npm-minor-patch:
+        update-types: [minor, patch]
+    open-pull-requests-limit: 5
+    ignore:
+      # @raycast/api pins these exactly (peerDependencies); bump them together
+      # with @raycast/api, never on their own.
+      - dependency-name: "@types/node"
+      - dependency-name: "@types/react"
+      # @raycast/eslint-config and typescript-eslint support typescript <6.1.
+      - dependency-name: typescript
+        versions: [">=6.1.0"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      actions:
+        patterns: ["*"]

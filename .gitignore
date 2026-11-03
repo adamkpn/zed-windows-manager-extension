@@ -8,3 +8,6 @@ raycast-env.d.ts
 # misc
 .DS_Store
 *.log
+
+# release assets (make release-assets)
+/release

@@ -1,0 +1,77 @@
+# Publishes a GitHub Release when a version tag is pushed:
+#   git tag v1.0.0 && git push origin v1.0.0
+# The release notes are the matching "## [x.y.z]" section of CHANGELOG.md.
+# Assets (built by `make release-assets`, which you can run locally too):
+#   zed-windows-vX.Y.Z.zip  the built extension, for Tinycast's "Add from folder"
+#   Zed-Open-vX.Y.Z.zip     the droplet app (ad-hoc signed, not notarized)
+# each with a .sha256 file.
+name: Release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions: {}
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build and publish
+    # macOS: the tests use the system sqlite3 and the droplet needs osacompile.
+    runs-on: macos-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write # create the release and upload its assets
+    steps:
+      - name: Validate tag
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          if ! printf '%s' "$TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::Tag '$TAG' is not vMAJOR.MINOR.PATCH"
+            exit 1
+          fi
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          package-manager-cache: false # no cache in a release job (cache poisoning)
+
+      # Same as Tinycast's "Install from GitHub": no dependency install scripts.
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Audit dependencies
+        run: npm audit --audit-level=high
+
+      - name: Install ShellCheck
+        run: command -v shellcheck >/dev/null || brew install shellcheck
+
+      # build, typecheck, ESLint + Prettier, unit tests, ShellCheck
+      - name: Verify
+        run: make verify
+
+      # Fails if CHANGELOG.md has no section for this version.
+      - name: Build release assets
+        env:
+          TAG: ${{ github.ref_name }}
+        run: make release-assets VERSION="$TAG"
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release create "$TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --verify-tag \
+            --title "$TAG" \
+            --notes-file release/notes.md \
+            release/*.zip release/*.zip.sha256

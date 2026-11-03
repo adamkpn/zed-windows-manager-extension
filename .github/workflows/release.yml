@@ -5,6 +5,10 @@
 #   zed-windows-vX.Y.Z.zip  the built extension, for Tinycast's "Add from folder"
 #   Zed-Open-vX.Y.Z.zip     the droplet app (ad-hoc signed, not notarized)
 # each with a .sha256 file.
+#
+# Two jobs on purpose: `build` runs npm dependencies (ray, eslint, tsx) with a
+# read-only token, and `publish` holds the write token but runs no third-party
+# code, so a compromised dependency can't steal the token to swap the assets.
 name: Release
 
 on:
@@ -18,13 +22,13 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  release:
-    name: Build and publish
+  build:
+    name: Build and verify
     # macOS: the tests use the system sqlite3 and the droplet needs osacompile.
     runs-on: macos-latest
     timeout-minutes: 20
     permissions:
-      contents: write # create the release and upload its assets
+      contents: read
     steps:
       - name: Validate tag
         env:
@@ -63,6 +67,30 @@ jobs:
         env:
           TAG: ${{ github.ref_name }}
         run: make release-assets VERSION="$TAG"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-assets
+          path: release/
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    name: Publish release
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write # create the release and upload its assets
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-assets
+          path: release
+
+      - name: Check checksums
+        working-directory: release
+        run: sha256sum -c ./*.sha256
 
       - name: Publish release
         env:

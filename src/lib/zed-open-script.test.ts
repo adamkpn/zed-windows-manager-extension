@@ -83,6 +83,14 @@ test("a window on a parent folder doesn't count as the child being open", () => 
   assert.deepEqual(run(child).calls, [`-n ${child}`]);
 });
 
+test("a folder name with a newline can't fake a match on another open root", () => {
+  // grep would read "<tmp>/nl\n<open>" as two patterns and match its second line.
+  const tricky = `${join(tmp, "nl\n")}${open}`;
+  mkdirSync(tricky, { recursive: true });
+  // The call log is newline-separated, so compare it whole.
+  assert.equal(run(tricky).calls.join("\n"), `-n ${tricky}`);
+});
+
 test("each argument is handled on its own", () => {
   assert.deepEqual(run(open, closed).calls, [`-e ${open}`, `-n ${closed}`]);
 });

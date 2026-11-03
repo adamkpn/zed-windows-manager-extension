@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1b2433"/>
+      <stop offset="1" stop-color="#0b0f17"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <rect x="2" y="2" width="508" height="508" rx="110" fill="none" stroke="#4f8cff" stroke-opacity="0.35" stroke-width="4"/>
+  <!-- back window -->
+  <rect x="150" y="96" width="250" height="180" rx="22" fill="#24324a" stroke="#5b7fb8" stroke-width="10"/>
+  <!-- middle window -->
+  <rect x="124" y="148" width="250" height="180" rx="22" fill="#2b3d5c" stroke="#6f9be6" stroke-width="10"/>
+  <!-- front window -->
+  <rect x="98" y="200" width="250" height="196" rx="22" fill="#0f1a2b" stroke="#4f8cff" stroke-width="12"/>
+  <line x1="98" y1="242" x2="348" y2="242" stroke="#4f8cff" stroke-width="10"/>
+  <circle cx="126" cy="221" r="7" fill="#4f8cff"/>
+  <circle cx="148" cy="221" r="7" fill="#4f8cff"/>
+  <!-- Z mark on the front window -->
+  <path d="M166 282 H280 L176 358 H290" fill="none" stroke="#e8eefc" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- search lens -->
+  <circle cx="368" cy="352" r="50" fill="#0b0f17" stroke="#e8eefc" stroke-width="16"/>
+  <line x1="404" y1="388" x2="440" y2="424" stroke="#e8eefc" stroke-width="20" stroke-linecap="round"/>
+</svg>

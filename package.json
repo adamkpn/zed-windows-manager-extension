@@ -1,0 +1,69 @@
+{
+  "$schema": "https://www.raycast.com/schemas/extension.json",
+  "name": "zed-windows",
+  "title": "Zed Windows",
+  "description": "Search the Zed windows you have open and jump to one, so you find what is already open instead of opening it again.",
+  "icon": "icon.png",
+  "author": "adamkpn",
+  "categories": [
+    "Developer Tools"
+  ],
+  "license": "MIT",
+  "private": true,
+  "platforms": [
+    "macOS"
+  ],
+  "commands": [
+    {
+      "name": "search-windows",
+      "title": "Search Zed Windows",
+      "subtitle": "Zed",
+      "description": "List the open Zed windows (most recently used first), search them by folder name or path, and bring one to the front.",
+      "mode": "view",
+      "keywords": [
+        "zed",
+        "window",
+        "workspace",
+        "project",
+        "switch"
+      ]
+    }
+  ],
+  "preferences": [
+    {
+      "name": "zedCliPath",
+      "title": "Path to Zed CLI",
+      "description": "Absolute path to the `zed` CLI. Leave empty to search /opt/homebrew/bin, /usr/local/bin, PATH and /Applications/Zed.app.",
+      "type": "textfield",
+      "required": false
+    },
+    {
+      "name": "zedDbPath",
+      "title": "Zed Database",
+      "description": "Zed's workspace database. Leave empty for ~/Library/Application Support/Zed/db/0-stable/db.sqlite (use 0-preview for Zed Preview).",
+      "type": "textfield",
+      "required": false
+    }
+  ],
+  "dependencies": {
+    "@raycast/api": "^2.9.0"
+  },
+  "devDependencies": {
+    "@raycast/eslint-config": "^2.2.0",
+    "@types/node": "22.19.17",
+    "@types/react": "^19.3.0",
+    "eslint": "^10.13.0",
+    "prettier": "^3.9.10",
+    "tsx": "^4.23.15",
+    "typescript": "^6.0.3"
+  },
+  "scripts": {
+    "build": "ray build",
+    "build:dist": "ray build -e dist -o dist",
+    "dev": "ray develop",
+    "fix-lint": "ray lint --fix",
+    "lint": "ray lint",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test src/lib/*.test.ts"
+  }
+}

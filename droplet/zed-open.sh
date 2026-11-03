@@ -57,6 +57,11 @@ open_roots() {
 
 # Exact root match only: a window rooted at a parent folder doesn't count.
 is_open() {
+  # grep reads each line of the pattern as its own pattern, so a folder name
+  # containing a newline could match a different open root. Zed's paths column
+  # is newline-separated, so such a folder can't be matched reliably anyway.
+  case $1 in *"
+"*) return 1 ;; esac
   open_roots | grep -Fxq -- "$1"
 }
 
